@@ -87,64 +87,27 @@ class HeatmapDrawer(TracksDrawer):
             return s2.LatLngRect.from_center_size(self._center, s2.LatLng.from_degrees(2 * dlat, 2 * dlng))
 
         elif self._cluster:
-            for tr in self.poster.tracks:
-                log.info(tr.bbox().get_center())
+            # Build a list of the coordinates of the center of each track, and convert to np array
             coords = [(tr.bbox().get_center().lat().degrees, tr.bbox().get_center().lng().degrees) for tr in self.poster.tracks]
             X = np.array(coords)
-            #print(X)
-            db = DBSCAN(eps=0.3, min_samples=10).fit(X)
-            #print(X.size)
+
+            # Increase eps argument to get a larger area in heatmap,
+            # decrease to get a smaller heatmap
+            db = DBSCAN(eps=0.1, min_samples=10).fit(X)
+
+            # Intiailize empty result set
             cluster_results = np.empty((db.labels_.size, 3))
-            #print(len(cluster_results), len(db.labels_))
+
+            # For each center coordinate, mark it with the resulting cluster number
             for i,entry in enumerate(cluster_results):
-                #print(cluster_results[i], db.labels_[i])
                 cluster_results[i] = np.append(X[i], db.labels_[i])
-            #print(cluster_results)
+
             tracks_bbox = s2.LatLngRect()
             for i,tr in enumerate(self.poster.tracks):
-                print(int(cluster_results[i][2]))
+                # Only include tracks in the 0th cluster (should be biggest? not sure)
                 if int(cluster_results[i][2]) == 0:
                     tracks_bbox = tracks_bbox.union(tr.bbox())
             return tracks_bbox
-
-
-
-            # print(db.labels_)
-        
-            # print(db.components_)
-            # print(db.labels_)
-            # print(len(db.labels_), len(db.components_), len(db.labels_))
-            # print(type(db.components_[0]))
-
-            # core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
-            # core_samples_mask[db.core_sample_indices_] = True
-            # labels = db.labels_
-            # n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
-            # print('Estimated number of clusters: %d' % n_clusters_)
-
-
-
-            # # Black removed and is used for noise instead.
-            # unique_labels = set(labels)
-            # colors = [plt.cm.Spectral(each)
-            #           for each in np.linspace(0, 1, len(unique_labels))]
-            # for k, col in zip(unique_labels, colors):
-            #     if k == -1:
-            #         # Black used for noise.
-            #         col = [0, 0, 0, 1]
-
-            #     class_member_mask = (labels == k)
-
-            #     xy = X[class_member_mask & core_samples_mask]
-            #     plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=tuple(col),
-            #              markeredgecolor='k', markersize=14)
-
-            #     xy = X[class_member_mask & ~core_samples_mask]
-            #     plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=tuple(col),
-            #              markeredgecolor='k', markersize=6)
-
-            # plt.title('Estimated number of clusters: %d' % n_clusters_)
-            # plt.show()
 
 
         tracks_bbox = s2.LatLngRect()
