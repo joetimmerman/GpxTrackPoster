@@ -1,0 +1,18 @@
+git appdirs==1.4.3
+colour==0.1.5
+cycler==0.10.0
+future==0.16.0
+gpxpy==1.2.0
+kiwisolver==1.0.1
+matplotlib==2.2.0
+numpy==1.14.2
+pkg-resources==0.0.0
+pyparsing==2.2.0
+python-dateutil==2.7.0
+pytz==2018.3
+s2sphere==0.2.5
+scikit-learn==0.19.1
+scipy==1.0.0
+six==1.11.0
+sklearn==0.0
+svgwrite==1.1.12

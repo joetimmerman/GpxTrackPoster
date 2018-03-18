@@ -14,6 +14,14 @@ from .tracks_drawer import TracksDrawer
 from .xy import XY
 from . import utils
 
+import numpy as np
+from sklearn.cluster import DBSCAN
+from sklearn import metrics
+from sklearn.datasets.samples_generator import make_blobs
+from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt
+
+
 
 log = logging.getLogger(__name__)
 
@@ -23,6 +31,7 @@ class HeatmapDrawer(TracksDrawer):
         super().__init__(the_poster)
         self._center = None
         self._radius = None
+        self._cluster = True
 
     def create_args(self, args_parser: argparse.ArgumentParser):
         group = args_parser.add_argument_group('Heatmap Type Options')
@@ -77,6 +86,67 @@ class HeatmapDrawer(TracksDrawer):
                             dlng = max(dlng, d)
             return s2.LatLngRect.from_center_size(self._center, s2.LatLng.from_degrees(2 * dlat, 2 * dlng))
 
+        elif self._cluster:
+            for tr in self.poster.tracks:
+                log.info(tr.bbox().get_center())
+            coords = [(tr.bbox().get_center().lat().degrees, tr.bbox().get_center().lng().degrees) for tr in self.poster.tracks]
+            X = np.array(coords)
+            #print(X)
+            db = DBSCAN(eps=0.3, min_samples=10).fit(X)
+            #print(X.size)
+            cluster_results = np.empty((db.labels_.size, 3))
+            #print(len(cluster_results), len(db.labels_))
+            for i,entry in enumerate(cluster_results):
+                #print(cluster_results[i], db.labels_[i])
+                cluster_results[i] = np.append(X[i], db.labels_[i])
+            #print(cluster_results)
+            tracks_bbox = s2.LatLngRect()
+            for i,tr in enumerate(self.poster.tracks):
+                print(int(cluster_results[i][2]))
+                if int(cluster_results[i][2]) == 0:
+                    tracks_bbox = tracks_bbox.union(tr.bbox())
+            return tracks_bbox
+
+
+
+            # print(db.labels_)
+        
+            # print(db.components_)
+            # print(db.labels_)
+            # print(len(db.labels_), len(db.components_), len(db.labels_))
+            # print(type(db.components_[0]))
+
+            # core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
+            # core_samples_mask[db.core_sample_indices_] = True
+            # labels = db.labels_
+            # n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
+            # print('Estimated number of clusters: %d' % n_clusters_)
+
+
+
+            # # Black removed and is used for noise instead.
+            # unique_labels = set(labels)
+            # colors = [plt.cm.Spectral(each)
+            #           for each in np.linspace(0, 1, len(unique_labels))]
+            # for k, col in zip(unique_labels, colors):
+            #     if k == -1:
+            #         # Black used for noise.
+            #         col = [0, 0, 0, 1]
+
+            #     class_member_mask = (labels == k)
+
+            #     xy = X[class_member_mask & core_samples_mask]
+            #     plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=tuple(col),
+            #              markeredgecolor='k', markersize=14)
+
+            #     xy = X[class_member_mask & ~core_samples_mask]
+            #     plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=tuple(col),
+            #              markeredgecolor='k', markersize=6)
+
+            # plt.title('Estimated number of clusters: %d' % n_clusters_)
+            # plt.show()
+
+
         tracks_bbox = s2.LatLngRect()
         for tr in self.poster.tracks:
             tracks_bbox = tracks_bbox.union(tr.bbox())
@@ -98,3 +168,5 @@ class HeatmapDrawer(TracksDrawer):
                 for line in lines:
                     dr.add(dr.polyline(points=line, stroke=color, stroke_opacity=opacity, fill='none',
                                        stroke_width=width, stroke_linejoin='round', stroke_linecap='round'))
+
+

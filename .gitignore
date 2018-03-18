@@ -5,3 +5,5 @@ gpx_dir/*
 output/*
 .env
 .idea
+log.*
+poster.*
