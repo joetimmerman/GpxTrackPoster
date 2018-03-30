@@ -79,6 +79,22 @@ class HeatmapDrawer(TracksDrawer):
             self._radius = args.heatmap_radius
 
     def _determine_bbox(self) -> s2.LatLngRect:
+        """Set the border for the heatmap.
+
+        If you try to just draw a heatmap from all the available tracks, it will likely look pretty
+        meaningless. For example, if you have 100 activities in New York and 1 in LA, your map will
+        be a map of the US with a red blob in New York and a blue dot in LA. One way to handle this
+        is to manually define the location and size of the heatmap (setting center and radius), but
+        this requires manual intervention from the user. Another option is to use clustering
+        (DBSCAN algorithm) and plot the heatmap for just that cluster.
+
+        TODO:
+            Automatically determine DBSCAN paramters.
+            Generate multiple heatmaps for each cluster.
+
+        Returns:
+            S2 rectangle representing the area to be covered by the heatmap.
+        """
         if self._center:
             log.info('Forcing heatmap center to {}'.format(self._center))
             dlat, dlng = 0, 0
@@ -104,7 +120,8 @@ class HeatmapDrawer(TracksDrawer):
 
         elif self._cluster:
             # Build a list of the coordinates of the center of each track, and convert to np array
-            coords = [(tr.bbox().get_center().lat().degrees, tr.bbox().get_center().lng().degrees) for tr in self.poster.tracks]
+            coords = [(tr.bbox().get_center().lat().degrees,
+                      tr.bbox().get_center().lng().degrees) for tr in self.poster.tracks]
             X = np.array(coords)
 
             # Increase eps argument to get a larger area in heatmap,
