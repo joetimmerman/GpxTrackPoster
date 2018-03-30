@@ -15,6 +15,9 @@ from .tracks_drawer import TracksDrawer
 from .xy import XY
 from . import utils
 
+import numpy as np
+from sklearn.cluster import DBSCAN
+
 
 log = logging.getLogger(__name__)
 
@@ -36,6 +39,7 @@ class HeatmapDrawer(TracksDrawer):
         super().__init__(the_poster)
         self._center = None
         self._radius = None
+        self._cluster = True
 
     def create_args(self, args_parser: argparse.ArgumentParser):
         group = args_parser.add_argument_group('Heatmap Type Options')
@@ -98,6 +102,30 @@ class HeatmapDrawer(TracksDrawer):
                             dlng = max(dlng, d)
             return s2.LatLngRect.from_center_size(self._center, s2.LatLng.from_degrees(2 * dlat, 2 * dlng))
 
+        elif self._cluster:
+            # Build a list of the coordinates of the center of each track, and convert to np array
+            coords = [(tr.bbox().get_center().lat().degrees, tr.bbox().get_center().lng().degrees) for tr in self.poster.tracks]
+            X = np.array(coords)
+
+            # Increase eps argument to get a larger area in heatmap,
+            # decrease to get a smaller heatmap
+            db = DBSCAN(eps=0.1, min_samples=10).fit(X)
+
+            # Intiailize empty result set
+            cluster_results = np.empty((db.labels_.size, 3))
+
+            # For each center coordinate, mark it with the resulting cluster number
+            for i,entry in enumerate(cluster_results):
+                cluster_results[i] = np.append(X[i], db.labels_[i])
+
+            tracks_bbox = s2.LatLngRect()
+            for i,tr in enumerate(self.poster.tracks):
+                # Only include tracks in the 0th cluster (should be biggest? not sure)
+                if int(cluster_results[i][2]) == 0:
+                    tracks_bbox = tracks_bbox.union(tr.bbox())
+            return tracks_bbox
+
+
         tracks_bbox = s2.LatLngRect()
         for tr in self.poster.tracks:
             tracks_bbox = tracks_bbox.union(tr.bbox())
@@ -120,3 +148,5 @@ class HeatmapDrawer(TracksDrawer):
                 for line in lines:
                     dr.add(dr.polyline(points=line, stroke=color, stroke_opacity=opacity, fill='none',
                                        stroke_width=width, stroke_linejoin='round', stroke_linecap='round'))
+
+
